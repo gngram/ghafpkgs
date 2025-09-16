@@ -9,7 +9,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gio
 
-logger = logging.getLogger("upm")
+from upm.logger import logger
 
 SELECT_LABEL = "Select"
 
