@@ -228,27 +228,7 @@ async def async_main():
         action=argparse.BooleanOptionalAction,
         help="Attach connected devices on startup",
     )
-    parser.add_argument(
-        "-u",
-        "--usb-passthrough-manager",
-        default=True,
-        action=argparse.BooleanOptionalAction,
-        help="With USB passthrough manager",
-    )
-    parser.add_argument(
-        "-t",
-        "--target-cid",
-        type=int,
-        default=5,
-        help="cid of target vm (gui-vm) to send hotplug events to",
-    )
-    parser.add_argument(
-        "-p",
-        "--target-port",
-        type=int,
-        default=7000,
-        help="port of target vm (gui-vm) to send hotplug events to",
-    )
+
     parser.add_argument(
         "-d",
         "--debug",
@@ -282,14 +262,12 @@ async def async_main():
             watcher.add_file(vm_socket)
 
     server = None
-    if args.usb_passthrough_manager:
-        from upm.host.service import HostService
-        from upm.logger import setup_logger as upm_logger_setup
+    if config.is_upmclient_enabled():
+        from vhotplug.upmclient import UPMClient
 
-        upm_logger_setup("debug" if args.debug else "info")
-        server = HostService(
-            port=args.target_port,
-            cid=args.target_cid,
+        server = UPMClient(
+            port=config.get_upmserver_port(),
+            cid=config.get_upmserver_cid(),
             passthrough_handler=handle_user_device_passthrough_request,
             metadata=(config, userDevices),
         )
@@ -307,7 +285,7 @@ async def async_main():
         server,
         watcher,
         args.attach_connected,
-        args.usb_passthrough_manager,
+        config.is_upmclient_enabled(),
     )
 
 
