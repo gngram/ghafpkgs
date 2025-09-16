@@ -8,10 +8,11 @@
   inotify-simple,
   setuptools,
   vsock-bridge,
+  vhotplug-schemas,
 }:
 buildPythonApplication {
   pname = "vhotplug";
-  version = "0.1";
+  version = "0.1.0";
   pyproject = true;
 
   propagatedBuildInputs = [
@@ -20,6 +21,7 @@ buildPythonApplication {
     inotify-simple
     qemu-qmp
     vsock-bridge
+    vhotplug-schemas
   ];
 
   doCheck = false;

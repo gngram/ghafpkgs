@@ -11,11 +11,12 @@
   gsettings-desktop-schemas,
   pygobject3,
   vsock-bridge,
+  vhotplug-schemas,
 }:
 
 buildPythonApplication {
   pname = "usb_passthrough_manager";
-  version = "0.0.1";
+  version = "0.1.0";
   src = ./usb_passthrough_manager;
   pyproject = true;
 
@@ -29,6 +30,7 @@ buildPythonApplication {
   propagatedBuildInputs = [
     pygobject3
     vsock-bridge
+    vhotplug-schemas
   ];
 
   buildInputs = [

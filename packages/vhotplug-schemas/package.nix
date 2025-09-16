@@ -8,9 +8,9 @@
 }:
 
 buildPythonPackage {
-  pname = "vsock_bridge";
+  pname = "vhotplug_schema";
   version = "0.1.0";
-  src = ./vsock_bridge;
+  src = ./vhotplug_schemas;
   pyproject = true;
 
   nativeBuildInputs = [

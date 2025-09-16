@@ -6,6 +6,8 @@ let
     pkgs:
     let
       inherit (pkgs) callPackage python3Packages;
+      vsock-bridge = python3Packages.callPackage ./vsock-bridge/package.nix { };
+      vhotplug-schemas = python3Packages.callPackage ./vhotplug-schemas/package.nix { };
     in
     {
       ghaf-artwork = callPackage ./ghaf-artwork { };
@@ -16,9 +18,11 @@ let
       ghaf-wallpapers = callPackage ./ghaf-wallpapers { };
       hotplug = python3Packages.callPackage ./hotplug/package.nix { };
       ldap-query = python3Packages.callPackage ./ldap-query/package.nix { };
-      vhotplug = python3Packages.callPackage ./vhotplug/package.nix { };
+      vhotplug = python3Packages.callPackage ./vhotplug/package.nix { inherit vsock-bridge vhotplug-schemas; };
       vinotify = python3Packages.callPackage ./vinotify/package.nix { };
-      usb-passthrough-manager = python3Packages.callPackage ./usb-passthrough-manager/package.nix { };
+      usb-passthrough-manager = python3Packages.callPackage ./usb-passthrough-manager/package.nix {
+        inherit vsock-bridge vhotplug-schemas;
+      };
     };
 in
 {

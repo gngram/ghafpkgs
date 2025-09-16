@@ -32,7 +32,7 @@ dev = ["pytest", "ruff", "mypy"]
 upm = "bin.upm_app:main"
 
 [project.scripts]
-upm_server = "bin.upm_server:main"
+upm_client = "bin.upm_client:main"
 upm_test = "bin.upm_test_host:main"
 
 [tool.setuptools.packages.find]

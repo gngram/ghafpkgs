@@ -6,8 +6,7 @@ import asyncio
 import argparse
 import os
 import pyudev
-import copy
-import threading
+from vsock_bridge.vsock import VsockServer
 from vhotplug.device import (
     vm_for_usb_device,
     attach_usb_device,
@@ -20,6 +19,8 @@ from vhotplug.device import (
 from vhotplug.config import Config
 from vhotplug.filewatcher import FileWatcher
 from vhotplug.apiserver import APIServer
+import socket
+from vsock_bridge.logger import setup_logger as vsock_bridge_setup_logger
 
 logger = logging.getLogger("vhotplug")
 
@@ -55,7 +56,7 @@ async def device_event(context, config, device, api_server, upmclient):
                     logger.info("No VM found for %s:%s", usb_info.vid, usb_info.pid)
                     return None
                 permitted = res[1]
-                if len(permitted) == 0 or upmclient is None:
+                if len(permitted) < 2 or upmclient is None:
                     vm = await vm_for_usb_device(
                         context, config, api_server, usb_info, None, True
                     )
@@ -159,6 +160,8 @@ async def async_main():
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG if args.debug else logging.INFO)
 
+    vsock_bridge_setup_logger(logging.DEBUG if args.debug else logging.INFO)
+
     if not os.path.exists(args.config):
         logger.error("Configuration file %s not found", args.config)
         return
@@ -179,16 +182,23 @@ async def async_main():
 
     api_server = None
     upmclient = None
-    if config.is_upmclient_enabled():
-        from vhotplug.upmclient import UPMClient
-
-        upmclient = UPMClient(
-            port=config.get_upmserver_port(),
-            cid=config.get_upmserver_cid(),
-            passthrough_handler=handle_user_device_passthrough_request,
-            metadata=(config, userDevices, api_server),
+    if config.is_vhotplug_server_enabled():
+        vsockserver = VsockServer(
+            cid=socket.VMADDR_CID_HOST,
+            port=config.get_vhotplug_server_port(),
+            max_connections=1,
         )
-        upmclient.start()
+        if config.is_upmclient_enabled():
+            from vhotplug.vhotplug_server import USBPassthroughGUI
+            upmclient = USBPassthroughGUI(
+                passthrough_handler=handle_user_device_passthrough_request,
+                metadata=(config, userDevices, api_server),
+            )
+            vsockserver.register_handler(
+                cid=config.get_upmclient_cid(),
+                handler=upmclient
+            )
+        vsockserver.start()
 
     if config.api_enabled():
         api_server = APIServer(config, context, asyncio.get_event_loop())
@@ -196,13 +206,7 @@ async def async_main():
 
     logger.info("Waiting for new devices")
     await monitor_loop(
-        monitor,
-        context,
-        config,
-        api_server,
-        watcher,
-        args.attach_connected,
-        upmclient
+        monitor, context, config, api_server, watcher, args.attach_connected, upmclient
     )
 
 
