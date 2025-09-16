@@ -7,7 +7,7 @@ let
     let
       inherit (pkgs) callPackage python3Packages;
     in
-    {
+    rec {
       ghaf-artwork = callPackage ./ghaf-artwork { };
       ghaf-audio-control = callPackage ./ghaf-audio-control { };
       ghaf-mem-manager = callPackage ./ghaf-mem-manager { inherit (inputs) crane; };
@@ -15,9 +15,12 @@ let
       ghaf-nw-packet-forwarder = callPackage ./ghaf-nw-packet-forwarder { inherit (inputs) crane; };
       ghaf-wallpapers = callPackage ./ghaf-wallpapers { };
       hotplug = python3Packages.callPackage ./hotplug/package.nix { };
-      vhotplug = python3Packages.callPackage ./vhotplug/package.nix { };
+      vsock-bridge = python3Packages.callPackage ./vsock-bridge/package.nix { };
+      vhotplug = python3Packages.callPackage ./vhotplug/package.nix { inherit vsock-bridge; };
       vinotify = python3Packages.callPackage ./vinotify/package.nix { };
-      usb-passthrough-manager = python3Packages.callPackage ./usb-passthrough-manager/package.nix { };
+      usb-passthrough-manager = python3Packages.callPackage ./usb-passthrough-manager/package.nix {
+        inherit vsock-bridge;
+      };
     };
 in
 {
