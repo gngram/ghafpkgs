@@ -285,7 +285,7 @@ async def async_main():
         server,
         watcher,
         args.attach_connected,
-        args.usb_passthrough_manager,
+        config.is_upmclient_enabled(),
     )
 
 

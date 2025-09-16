@@ -112,8 +112,8 @@ class DeviceConnected(Message):
         device_id = _str_ok(dev.get("device_id"), "device_id")
         vendor = _str_ok(dev.get("vendor"), "vendor")
         product = _str_ok(dev.get("product"), "product")
-        permitted = dev.get("permitted_vms", dev.get("permitted-vms", []))
-        current_vm = dev.get("current_vm", dev.get("current-vm"))
+        permitted = dev.get("permitted_vms", [])
+        current_vm = dev.get("current_vm")
         if not _is_list_of_str(permitted):
             raise ValueError("device.permitted_vms must be list[str]")
         if current_vm is not None and not isinstance(current_vm, str):
@@ -163,14 +163,11 @@ class PassthroughAck(Message):
         device_id: str,
         current_vm: Optional[str],
         status: str,
-        reason: Optional[str] = None,
     ) -> None:
         if current_vm is not None and not isinstance(current_vm, str):
             raise ValueError("'current_vm' must be str | None")
         if status not in ("ok", "denied", "error"):
             raise ValueError("'status' must be ok|denied|error")
-        if reason is not None and not isinstance(reason, str):
-            raise ValueError("'reason' must be str if provided")
         self._data = {
             "device_id": _str_ok(device_id, "device_id"),
             "current_vm": current_vm,
@@ -195,23 +192,18 @@ class PassthroughAck(Message):
             "current_vm": self.current_vm,
             "status": self.status,
         }
-        if self.reason is not None:
-            payload["reason"] = self.reason
         return {"type": self.MSG_TYPE, "payload": payload}
 
     @staticmethod
     def from_payload(pl: Dict[str, Any]) -> "PassthroughAck":
         device_id = _str_ok(pl.get("device_id"), "device_id")
-        current_vm = pl.get("current_vm", pl.get("current-vm"))
+        current_vm = pl.get("current_vm")
         status = pl.get("status", "ok")
-        reason = pl.get("reason")
         if current_vm is not None and not isinstance(current_vm, str):
             raise ValueError("'current_vm' must be str | None")
         if status not in ("ok", "denied", "error"):
             raise ValueError("'status' must be ok|denied|error")
-        if reason is not None and not isinstance(reason, str):
-            raise ValueError("'reason' must be str if provided")
-        return PassthroughAck(device_id, current_vm, status, reason)
+        return PassthroughAck(device_id, current_vm, status)
 
     @staticmethod
     def from_message(msg: Dict[str, Any]) -> Optional["PassthroughAck"]:
@@ -232,8 +224,8 @@ class ConnectedDevices(Message):
                 raise ValueError("devices must be dict[str, object]")
             vendor = _str_ok(info.get("vendor"), "vendor")
             product = _str_ok(info.get("product"), "product")
-            permitted = info.get("permitted_vms", info.get("permitted-vms", []))
-            current_vm = info.get("current_vm", info.get("current-vm"))
+            permitted = info.get("permitted_vms", [])
+            current_vm = info.get("current_vm")
             if not _is_list_of_str(permitted):
                 raise ValueError(f"devices[{did!r}].permitted_vms must be list[str]")
             if current_vm is not None and not isinstance(current_vm, str):

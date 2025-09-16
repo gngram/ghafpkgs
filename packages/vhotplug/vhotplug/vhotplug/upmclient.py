@@ -65,8 +65,8 @@ class UPMClient:
                     "device_id": device_id,
                     "vendor": vendor,
                     "product": product,
-                    "permitted-vms": permitted_vms,
-                    "current-vm": current_vm,
+                    "permitted_vms": permitted_vms,
+                    "current_vm": current_vm,
                 }
             else:
                 logger.error(
@@ -113,9 +113,9 @@ class UPMClient:
                 )
                 return False
             else:
-                if new_vm in self.device_registry[device_id]["permitted-vms"]:
-                    if new_vm != self.device_registry[device_id]["current-vm"]:
-                        self.device_registry[device_id]["current-vm"] = new_vm
+                if new_vm in self.device_registry[device_id]["permitted_vms"]:
+                    if new_vm != self.device_registry[device_id]["current_vm"]:
+                        self.device_registry[device_id]["current_vm"] = new_vm
                     else:
                         logger.info(f"Device {device_id} already on VM {new_vm}")
                         return True

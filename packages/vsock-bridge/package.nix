@@ -8,9 +8,9 @@
 }:
 
 buildPythonPackage {
-  pname = "vsock-bridge";
+  pname = "vsock_bridge";
   version = "0.0.1";
-  src = ./vsock-bridge;
+  src = ./vsock_bridge;
   pyproject = true;
 
   nativeBuildInputs = [

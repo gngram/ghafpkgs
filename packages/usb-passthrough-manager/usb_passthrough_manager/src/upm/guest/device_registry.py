@@ -152,7 +152,7 @@ class DeviceRegister:
         elif msgtype == dpm.PassthroughAck.MSG_TYPE:
             ack = dpm.PassthroughAck.from_message(msg)
             if ack.status == "ok":
-                self.device_registry[ack.device_id]["current-vm"] = ack.current_vm
+                self.device_registry[ack.device_id]["current_vm"] = ack.current_vm
                 self.atomic_write_registry(self.device_registry)
             else:
                 logger.error(f"Passthrough failed: {ack.device_id} -> {ack.current_vm}")
