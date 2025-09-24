@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from vsock_bridge.vsock import VsockServer
+from vsock_bridge.vsock import VsockClient
 from vsock_bridge.protocols import dpm
 from upm.guest.notify_user import show_new_device_popup_async, DeviceStruct
 from upm.logger import logger, log_entry_exit
@@ -16,7 +16,7 @@ from upm.logger import logger, log_entry_exit
 
 class DeviceRegister:
     def __init__(self, cid: int, port: int, data_dir: str):
-        self.server = VsockServer(
+        self.server = VsockClient(
             on_message=self.on_msg,
             on_connect=self.on_connect,
             on_disconnect=self.on_disconnect,

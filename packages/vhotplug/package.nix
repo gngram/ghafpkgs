@@ -8,6 +8,7 @@
   inotify-simple,
   setuptools,
   vsock-bridge,
+  vhotplug-schemas,
 }:
 buildPythonApplication {
   pname = "vhotplug";

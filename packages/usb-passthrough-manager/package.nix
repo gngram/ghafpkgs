@@ -11,6 +11,7 @@
   gsettings-desktop-schemas,
   pygobject3,
   vsock-bridge,
+  vhotplug-schemas,
 }:
 
 buildPythonApplication {
