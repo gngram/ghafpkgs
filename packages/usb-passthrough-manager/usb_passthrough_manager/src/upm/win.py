@@ -1,9 +1,15 @@
+# Copyright 2022-2025 TII (SSRC) and the Ghaf contributors
+# SPDX-License-Identifier: Apache-2.0
+
 import json
-import logging
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
+from dataclasses import dataclass
+from upm.api_client import APIClient
 import gi
+
+from upm.logger import logger, log_entry_exit
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("GLib", "2.0")
@@ -14,32 +20,20 @@ from upm.logger import logger
 
 SELECT_LABEL = "Select"
 
-
-def _read_schema_once(path: Path) -> Dict[str, Any]:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            doc = json.load(f) or {}
-    except Exception as e:
-        logger.error(f"Failed to read schema file: {e}")
-        return {}
-    return doc if isinstance(doc, dict) else {}
-
-
-class AppWindow(Gtk.ApplicationWindow):
+class WinGenerator(Gtk.ApplicationWindow):
     def __init__(
         self,
         app: Gtk.Application,
-        data_dir: str,
+        apiclient,
+        devices,
+        title: str = "Device Bridge",
     ):
-        super().__init__(application=app, title="Device Bridge")
-        self.set_default_size(600, 300)
-
-        self.file_path = Path(data_dir) / "usb_db.json"
-        self.fifo_path = Path(data_dir) / "app_request.fifo"
-
+        super().__init__(application=app, title=title)
+        self.devices = devices
+        self.apiclient = apiclient
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.set_child(root)
-
+        
         content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         content_box.set_margin_top(8)
         content_box.set_margin_bottom(8)
@@ -66,24 +60,34 @@ class AppWindow(Gtk.ApplicationWindow):
         self.inner.set_max_children_per_line(2)
         scroller.set_child(self.inner)
 
-        action_bar = Gtk.ActionBar()
+        self.action_bar = Gtk.ActionBar()
         root.append(action_bar)
 
-        action_bar.pack_start(Gtk.Box(hexpand=True))
+        self.action_bar.pack_start(Gtk.Box(hexpand=True))
+        self.blocks = {}
 
+    def _add_close_btn(self):
+        self.close_btn = Gtk.Button(label="Close")
+        self.close_btn.connect("clicked", lambda *_: self.close())
+        self.action_bar.pack_end(self.close_btn)
+        self.connect("close-request", self._on_close_request)
+        
+    def _add_refresh_btn(self):
         self.refresh_btn = Gtk.Button(label="Refresh")
         self.refresh_btn.set_tooltip_text("Refresh status from JSON.")
         self.refresh_btn.connect("clicked", self._on_refresh_clicked)
-        action_bar.pack_end(self.refresh_btn)
+        self.action_bar.pack_end(self.refresh_btn)
+        
+    def show_notification(self):
+        self.set_default_size(320, 320)
+        self._add_close_btn()
+        self._load_ui()
 
-        self.close_btn = Gtk.Button(label="Close")
-        self.close_btn.connect("clicked", lambda *_: self.close())
-        action_bar.pack_end(self.close_btn)
-
-        self.connect("close-request", self._on_close_request)
-
-        self.blocks = {}
-        self._apply_reload_ui()
+    def show_app_window(self):
+        self.set_default_size(600, 300)
+        self._add_refresh_btn()
+        self._add_close_btn()
+        self._load_ui()
 
     def _clear_blocks_ui(self) -> None:
         for info in list(self.blocks.values()):
@@ -143,26 +147,32 @@ class AppWindow(Gtk.ApplicationWindow):
             "dropdown": dropdown,
         }
 
-    def _apply_reload_ui(self):
-        doc = _read_schema_once(self.file_path)
+    def _load_ui(self):
         self._clear_blocks_ui()
-        for dev_id, meta in doc.items():
-            permitted = list(meta.get("permitted_vms", []))
-            product = meta.get("product") or ""
-            selected = meta.get("current_vm") or ""
+        for dev in self.devices:
+            dev_id = dev.get("device_node")
+            product = dev.get("product_name")
+            permitted = dev.get("allowed_vms", [])
+            selected = dev.get("vm")
             self._add_block_ui(dev_id, product, permitted, selected)
 
-    def _request_passthrough(self, device_id: str, new_vm: str) -> bool:
-        request = f"{device_id}->{new_vm}\n"
-        with open(self.fifo_path, "w", encoding="utf-8", buffering=1) as f:
-            try:
-                f.write(request)
-                return True
-            except Exception as e:
-                logger.error(f"Failed to send passthrough request: {e}")
-                return False
-        return False
+    def _find_device(self, device_id: str):
+        for dev in self.devices:
+            if dev.get("device_node") == device_id:
+                return dev
+        return None
 
+    def _request_passthrough(self, device_id: str, new_vm: str) -> bool:
+        device = self._find_device(device_id)
+        response = self.apiclient.usb_detach(device)
+        if response.get("result") != "ok":
+            logger.error(f"Failed to detach device!")
+        response = self.appclient.usb_attach(device, new_vm)
+        if response.get("result") != "ok":
+            logger.error(f"Failed to attach device!")
+            return False
+        return True
+    
     def _on_dropdown_changed(
         self, dropdown: Gtk.DropDown, _pspec, device_id: str
     ) -> None:
@@ -173,10 +183,17 @@ class AppWindow(Gtk.ApplicationWindow):
         text = model.get_string(idx)
         if text is None or text == SELECT_LABEL:
             return
-        self._request_passthrough(device_id, text)
+        status = self._request_passthrough(device_id, text)
+        if not status:
+            self._show_error_dialog(
+                title="Error", message="Failed to request passthrough."
+            )
 
     def _on_refresh_clicked(self, _btn: Gtk.Button) -> None:
-        self._apply_reload_ui()
+        response = self.apiclient.usb_list()
+        if response.get("result") == "ok":
+            self.devices = response.get("devices", [])
+            self._load_ui()
 
     def _show_error_dialog(self, title: str, message: str) -> bool:
         dlg = Gtk.MessageDialog(
@@ -195,24 +212,50 @@ class AppWindow(Gtk.ApplicationWindow):
         return False
 
 
-class DeviceBridge(Gtk.Application):
-    def __init__(self, data_dir: str):
+class USBDeviceMap(Gtk.Application):
+    def __init__(self, server_port=7000):
         super().__init__(
-            application_id="ghaf.device.bridge", flags=Gio.ApplicationFlags.FLAGS_NONE
+            application_id="ghaf.usb-device.map", flags=Gio.ApplicationFlags.FLAGS_NONE
         )
-        self._data_dir = data_dir
-        self._win: Optional[AppWindow] = None
+        self.server_port = server_port
+        self._win: Optional[WinGenerator] = None
 
     def do_activate(self):
         if not self._win:
-            self._win = AppWindow(self, data_dir=self._data_dir)
+            apiclient = APIClient(port = self.server_port)
+            devices = apiclient.usb_list()
+            if devices.get("result") == "ok":
+                self._win = WinGenerator(self, apiclient=apiclient, devices=devices.get("usb_devices", []), title="USB Device Map")
+                self._win.show_app_window()
         self._win.present()
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    import sys
+class Notification(Gtk.Application):
+    def __init__(self, server_port=7000):
+        super().__init__(
+            application_id="ghaf.usbdevice.notificiation", flags=Gio.ApplicationFlags.FLAGS_NONE
+        )
+        self.server_port = server_port
+        self._win: Optional[WinGenerator] = None
 
-    data_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    app = DeviceBridge(data_dir=data_dir)
-    raise SystemExit(app.run(None))
+    def do_activate(self, apiclient, device):
+        if not self._win:
+            self._win = WinGenerator(self, apiclient=apiclient, devices=[device], title="Device Notification!")
+            self._win.show_notification()
+        self._win.present()
+
+   
+class USBDeviceNotification():
+    def __init__(self, server_port=7000):
+        self.server_port = server_port
+        self.apiclient = APIClient.recv_notifications(callback=self.notify_user, port=server_port)
+    
+    def notify_user(self, device):
+        th = threading.Thread(target=self.show_notif_window, args=(device))
+        th.start()
+        th.join()
+
+    def show_notif_window(self, device):
+        notif = Notification(self.server_port)
+        raise SystemExit(notif.run(None))
+        
