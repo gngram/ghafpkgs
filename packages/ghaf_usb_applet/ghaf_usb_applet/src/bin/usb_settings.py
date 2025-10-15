@@ -6,6 +6,7 @@ import argparse
 from ghaf_usb_applet.settings import SettingsMenu
 from ghaf_usb_applet.logger import setup_logger
 
+
 def build_parser():
     p = argparse.ArgumentParser(description="USB Device Settings")
     p.add_argument(
@@ -14,12 +15,13 @@ def build_parser():
     p.add_argument("--loglevel", type=str, default="info", help="Log level")
     return p.parse_args()
 
+
 def main():
     args = build_parser()
     setup_logger(args.loglevel)
     app = SettingsMenu(args.port)
     raise SystemExit(app.run())
 
+
 if __name__ == "__main__":
     main()
-

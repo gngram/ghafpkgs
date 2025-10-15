@@ -5,6 +5,7 @@ import argparse
 from ghaf_usb_applet.notification_handler import USBDeviceNotification
 from ghaf_usb_applet.logger import setup_logger
 
+
 def build_parser():
     p = argparse.ArgumentParser(description="USB Device notifier")
     p.add_argument(
@@ -13,10 +14,12 @@ def build_parser():
     p.add_argument("--loglevel", type=str, default="info", help="Log level")
     return p
 
+
 def main():
     args = build_parser().parse_args()
     setup_logger(args.loglevel)
-    USBDeviceNotification(server_port = args.port)
+    USBDeviceNotification(server_port=args.port)
+
 
 if __name__ == "__main__":
     main()

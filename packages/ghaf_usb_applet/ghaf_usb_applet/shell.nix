@@ -1,3 +1,6 @@
+# Copyright 2022-2025 TII (SSRC) and the Ghaf contributors
+# SPDX-License-Identifier: Apache-2.0
+
 {
   pkgs ? import <nixpkgs> { },
 }:
@@ -8,17 +11,10 @@ pkgs.mkShell {
     python313Packages.pygobject3
     python313Packages.virtualenv
     gtk3
+    gtk4
     gobject-introspection
-    wayland
-    vim
-   # Libadwaita for modern GTK4 styling conventions (good practice to include).
-    adwaita-icon-theme # Provides standard icons
-    libadwaita
-
-    # The Ayatana AppIndicator library and its GObject Introspection data.
     libayatana-appindicator
-    libappindicator
-    ];
+  ];
 
   shellHook = ''
     VENV_DIR=".venv"

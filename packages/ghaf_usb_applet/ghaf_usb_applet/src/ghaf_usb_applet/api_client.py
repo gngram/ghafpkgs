@@ -8,6 +8,7 @@ import time
 
 from ghaf_usb_applet.logger import logger
 
+
 class APIClient:
     def __init__(self, port=2000, cid=2):
         self.port = port
@@ -105,15 +106,16 @@ class APIClient:
         unique_idx = 1
         if devices.get("result") == "ok":
             for dev in devices.get("usb_devices", []):
-                print(dev)
+                logger.debug(dev)
                 allowed_vms = dev.get("allowed_vms", None)
                 if allowed_vms is None or len(allowed_vms) == 0:
                     continue
-                if 'eject' not in allowed_vms:
-                    allowed_vms = allowed_vms.insert(0, 'eject')
+                if len(allowed_vms) > 1:
+                    if "None" not in allowed_vms and "none" not in allowed_vms:
+                        allowed_vms.insert(0, "None")
                 vm = dev.get("vm", None)
                 if vm is None:
-                    dev['vm'] = 'eject'         
+                    dev["vm"] = "None"
                 if "device_node" in dev and "product_name" in dev:
                     product_name = dev.get("product_name")
                     if product_name is None:
@@ -121,7 +123,7 @@ class APIClient:
 
                     if product_name.isdigit():
                         product_name = "<unknown device>"
-                    product_name = product_name.replace('_', " ")
+                    product_name = product_name.replace("_", " ")
                     if product_name not in device_map:
                         device_map[product_name] = dev
                     else:
@@ -129,4 +131,3 @@ class APIClient:
                         device_map[product_name] = dev
                         unique_idx += 1
         return device_map
-        
