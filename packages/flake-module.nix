@@ -18,7 +18,7 @@ let
       ldap-query = python3Packages.callPackage ./ldap-query/package.nix { };
       vhotplug = python3Packages.callPackage ./vhotplug/package.nix { };
       vinotify = python3Packages.callPackage ./vinotify/package.nix { };
-      usb-passthrough-manager = python3Packages.callPackage ./usb-passthrough-manager/package.nix { };
+      ghaf-usb-applet = python3Packages.callPackage ./ghaf_usb_applet/package.nix { };
     };
 in
 {
